@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: tableau-wip
+  name: tableau-wip
+spec:
+  ports:
+  - name: https
+    port: 10443
+    targetPort: https
+  selector:
+    name: tableau-wip

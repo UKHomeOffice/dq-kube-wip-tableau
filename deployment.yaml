@@ -1,0 +1,101 @@
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tableau-wip
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        name: tableau-wip
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: opensslsidekick
+          image: quay.io/ukhomeofficedigital/dq-haproxy-openssl-sidekick:2c6365e69c5dcbedda3f9f77214e8fe3821567b9
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          env:
+            - name: EXPOSED_PORT
+              value: '5000'
+            - name: HOST
+              value: '10.3.0.11'
+            - name: PORT
+              value: '8083'
+          ports:
+            - containerPort: 5000
+
+        - name: keycloak-proxy
+          ports:
+            - name: http
+              containerPort: 8081
+          image: quay.io/keycloak/keycloak-gatekeeper:8.0.0
+          securityContext:
+            runAsNonRoot: true
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+          env:
+            - name: PROXY_CLIENT_ID
+              value: tableau-wip
+            - name: PROXY_LISTEN
+              value: 0.0.0.0:8081
+            - name: PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tableau-wip
+                  key: keycloak_secret
+            - name: PROXY_DISCOVERY_URL
+              valueFrom:
+                secretKeyRef:
+                  name: tableau-wip
+                  key: keycloak_discovery_url
+            - name: PROXY_UPSTREAM_URL
+              value: http://127.0.0.1:5000
+          args:
+            - --resources
+            - uri=/*|roles=tableau
+            - --enable-logging
+            - --enable-json-logging
+            - --verbose
+            - --upstream-timeout
+            - 60s
+            - --upstream-response-header-timeout
+            - 60s
+
+        - name: proxy
+          image: quay.io/ukhomeofficedigital/nginx-proxy-proxy-redirect
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+          env:
+            - name: PROXY_SERVICE_HOST
+              value: 'https://10.3.0.11'
+            - name: PROXY_SERVICE_PORT
+              value: '8083'
+            - name: LOG_FORMAT_NAME
+              value: 'json'
+            - name: NAXSI_USE_DEFAULT_RULES
+              value: 'FALSE'
+            - name: ENABLE_UUID_PARAM
+              value: 'FALSE'
+            - name: PROXY_REDIRECT
+              value: 'https://127.0.0.1:5000 https://$host; proxy_redirect https://{{.URL}}:10443 https://$host'
+            - name: ADD_NGINX_SERVER_CFG
+              value: |
+                proxy_read_timeout 300s;
+                proxy_send_timeout 300s;
+                proxy_connect_timeout 300s;
+                proxy_set_header  X-Real-IP $remote_addr;
+                proxy_set_header  X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header  X-Forwarded-Host $server_name;
+                proxy_set_header  X-Forwarded-Proto https;
+          ports:
+            - name: https
+              containerPort: 10443

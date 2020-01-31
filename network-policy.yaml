@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-tableau-wip
+spec:
+  podSelector:
+    matchLabels:
+      name: tableau-wip
+  ingress:
+    - ports:
+      - protocol: TCP
+        port: 10443
