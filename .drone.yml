@@ -25,7 +25,7 @@ pipeline:
     environment:
       - KUBE_NAMESPACE=dq-apps
       - INSECURE_SKIP_TLS_VERIFY=true
-      - URL=tableau-wip.notprod.dq.homeoffice.gov.uk
+      - URL=tableau-wip.dq.homeoffice.gov.uk
     commands:
       - export KEYCLOAK_SECRET=$$PROD_KEYCLOAK_SECRET
       - export KEYCLOAK_DISCOVERY_URL=$$PROD_KEYCLOAK_DISCOVERY_URL
