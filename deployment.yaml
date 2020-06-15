@@ -1,5 +1,5 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tableau-wip
@@ -73,7 +73,7 @@ spec:
           image: quay.io/ukhomeofficedigital/nginx-proxy-proxy-redirect
           securityContext:
             allowPrivilegeEscalation: true
-            runAsUser: 1000
+            runAsUser: 0
           env:
             - name: PROXY_SERVICE_HOST
               value: 'https://10.3.0.11'
